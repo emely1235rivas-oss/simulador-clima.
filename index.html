@@ -326,9 +326,8 @@
             if(tabName === 'teoria') buttons[0].classList.add('active');
             if(tabName === 'simulador') {
                 buttons[1].classList.add('active');
-                if(buttons[2]) buttons[2].classList.add('active'); // Botón interno
+                if(buttons[2]) buttons[2].classList.add('active'); 
                 
-                // Mostrar instrucciones solo la primera vez
                 if(firstTimeSim) {
                     openModal();
                     firstTimeSim = false;
@@ -336,7 +335,6 @@
             }
         }
 
-        // Lógica del Modal
         function openModal() {
             document.getElementById('instructionModal').style.display = 'flex';
         }
@@ -344,7 +342,6 @@
             document.getElementById('instructionModal').style.display = 'none';
         }
 
-        // Lógica del Simulador
         const inSun = document.getElementById('inSun');
         const inOzone = document.getElementById('inOzone');
         const inCO2 = document.getElementById('inCO2');
@@ -427,7 +424,6 @@
         updateProcess();
     </script>
 </body>
-
 </html>
 
 
