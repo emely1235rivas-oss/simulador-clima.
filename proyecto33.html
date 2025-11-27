@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador: Atmósfera y Clima (Ingeniería Química)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #2980b9;
+            --danger: #c0392b;
+            --warning: #f39c12;
+            --success: #27ae60;
+            --bg: #f4f6f7;
+            --text: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* --- NAVEGACIÓN --- */
+        .nav-bar {
+            background: var(--primary);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-title {
+            color: white; font-size: 1.2rem; font-weight: bold;
+        }
+
+        .tab-container { display: flex; gap: 10px; }
+
+        .tab-btn {
+            background: rgba(255,255,255,0.1);
+            color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.3s;
+        }
+        .tab-btn:hover { background: rgba(255,255,255,0.3); }
+        .tab-btn.active {
+            background: var(--accent); box-shadow: 0 0 10px rgba(41, 128, 185, 0.5); border-bottom: 3px solid white;
+        }
+
+        /* --- SECCIONES --- */
+        .content-section {
+            display: none; padding: 30px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.5s;
+        }
+        .content-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- TEORÍA --- */
+        .theory-card {
+            background: white; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 5px solid var(--accent);
+        }
+        .theme-badge { background: var(--primary); color: white; padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        .concept-img { display: block; margin: 15px auto; max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #ddd; background: #eee; min-height: 200px; }
+
+        /* --- SIMULADOR --- */
+        .main-container-sim { display: grid; grid-template-columns: 320px 1fr; gap: 20px; position: relative; }
+        
+        .control-panel {
+            background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content;
+        }
+
+        .viewport {
+            position: relative; height: 450px;
+            background: linear-gradient(to bottom, #1a253a 0%, #3498db 40%, #85c1e9 100%);
+            border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #bdc3c7;
+        }
+
+        /* Elementos Visuales */
+        .sun { position: absolute; top: 30px; right: 30px; width: 80px; height: 80px; background: #f1c40f; border-radius: 50%; box-shadow: 0 0 50px #f39c12; z-index: 2; transition: transform 0.3s; }
+        .ozone-layer { position: absolute; top: 15%; left: 0; width: 100%; height: 50px; background: repeating-linear-gradient(45deg, rgba(142, 68, 173, 0.2), rgba(142, 68, 173, 0.2) 10px, transparent 10px, transparent 20px); border-top: 2px dashed rgba(142, 68, 173, 0.5); border-bottom: 2px dashed rgba(142, 68, 173, 0.5); transition: opacity 0.5s; z-index: 3; }
+        .ghg-cloud { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top, rgba(50,50,50,0.8), transparent); pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 4; }
+        .ray-uv { position: absolute; top: 70px; right: 70px; width: 4px; height: 0; background: #9b59b6; box-shadow: 0 0 5px #9b59b6; transform: rotate(15deg); transform-origin: top; transition: height 0.5s; z-index: 5; }
+        .ray-ir { position: absolute; bottom: 20px; left: 50%; width: 0px; height: 0px; background: radial-gradient(circle, rgba(231, 76, 60, 0.4) 0%, transparent 70%); border-radius: 50%; transform: translateX(-50%); transition: width 0.5s, height 0.5s; z-index: 4; }
+        .ground { position: absolute; bottom: 0; width: 100%; height: 80px; background: #27ae60; display: flex; align-items: flex-end; justify-content: center; z-index: 6; transition: background 0.5s; }
+        .label-txt { position: absolute; left: 20px; color: rgba(255,255,255,0.8); font-size: 0.8rem; border-left: 2px solid rgba(255,255,255,0.5); padding-left: 10px; }
+        
+        .sensors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
+        .sensor-card { background: white; padding: 15px; border-radius: 8px; text-align: center; border-top: 4px solid #bdc3c7; }
+        .sensor-value { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        
+        .quiz-section { background: white; padding: 20px; border-radius: 12px; margin-top: 20px; border-left: 5px solid var(--accent); }
+        .quiz-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .question-card { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        .options button { display: block; width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer; text-align: left; }
+        .options button:hover { background: #eef2f7; }
+        .feedback { margin-top: 10px; font-size: 0.85rem; padding: 5px; border-radius: 4px; display: none; }
+        .feedback.correct { background: #d4edda; color: #155724; display: block; }
+        .feedback.wrong { background: #f8d7da; color: #721c24; display: block; }
+        
+        .lab-note { background: #e8f6f3; border: 1px solid #a2d9ce; padding: 15px; border-radius: 8px; font-size: 0.85rem; color: #16a085; margin-top: 20px; }
+
+        /* --- MODAL DE INSTRUCCIONES --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 2000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: white; width: 90%; max-width: 600px; padding: 30px;
+            border-radius: 12px; position: relative; animation: slideDown 0.3s;
+        }
+        @keyframes slideDown { from {transform: translateY(-50px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
+        
+        .modal-header h2 { margin: 0; color: var(--primary); }
+        .modal-steps { margin-top: 20px; }
+        .step { display: flex; gap: 15px; margin-bottom: 20px; align-items: flex-start; }
+        .step-icon { background: var(--accent); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+        .step-text h4 { margin: 0 0 5px 0; color: #333; }
+        .step-text p { margin: 0; font-size: 0.9rem; color: #666; }
+        
+        .btn-start {
+            background: var(--success); color: white; border: none; padding: 12px 30px;
+            border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; width: 100%;
+        }
+        .btn-start:hover { background: #219150; }
+        
+        .help-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: var(--accent); color: white; border: none; width: 35px; height: 35px;
+            border-radius: 50%; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 900px) {
+            .main-container-sim, .quiz-container { grid-template-columns: 1fr; }
+            .nav-bar { flex-direction: column; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="instructionModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🧪 Guía de Inicio Rápido</h2>
+                <p>Bienvenido al simulador. Sigue estos pasos para operar:</p>
+            </div>
+            <div class="modal-steps">
+                <div class="step">
+                    <div class="step-icon">1</div>
+                    <div class="step-text">
+                        <h4>Ajusta las Entradas (Izquierda)</h4>
+                        <p>Manipula los controles deslizantes. El <strong>Ozono</strong> afecta los Rayos UV (línea morada) y el <strong>CO₂</strong> afecta la temperatura (nube gris).</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-icon">2</div>
+                    <div class="step-text">
+                        <h4>Observa los Cambios Visuales</h4>
+                        <p>Mira la pantalla central. Si rompes el ozono, el rayo baja. Si subes el CO₂, el suelo brilla en rojo (calor atrapado).</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-icon">3</div>
+                    <div class="step-text">
+                        <h4>Analiza los Sensores (Abajo)</h4>
+                        <p>Los cuadros inferiores te darán datos precisos. Tu meta es evitar la "Crisis Climática" y la "Alerta UV".</p>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-start" onclick="closeModal()">¡Entendido! Comenzar Simulación</button>
+        </div>
+    </div>
+
+    <nav class="nav-bar">
+        <div class="nav-title">🏭 Ingeniería Química: Atmósfera y Clima</div>
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('teoria')">📘 Guía Teórica</button>
+            <button class="tab-btn" onclick="switchTab('simulador')">🧪 Simulador Interactivo</button>
+        </div>
+    </nav>
+
+    <section id="teoria" class="content-section active">
+        <div class="theory-card" style="background: #e8f4f8; border-color: #3498db;">
+            <h2 style="margin-top:0;">Bienvenido al Proyecto</h2>
+            <p>"La atmósfera funciona como una casa con dos sistemas: un <strong>Techo</strong> (Capa de Ozono) y un <strong>Aire Acondicionado</strong> (Ciclo del Carbono). Este proyecto demuestra que, aunque ambos están en el cielo, funcionan de forma separada."</p>
+        </div>
+
+        <div class="theory-card">
+            <span class="theme-badge" style="background:#f39c12;">Tema 1: Radiación Solar</span>
+            <h3>El Motor del Sistema</h3>
+            <p>Todo empieza con el Sol. Es la fuente de energía. La atmósfera decide cuánta de esa energía entra (UV) y cuánta se queda atrapada (Calor).</p>
+        </div>
+
+        <div class="theory-card">
+            <span class="theme-badge" style="background:#8e44ad;">Tema 2: Ozono Estratosférico</span>
+            <h3>El Filtro Solar (El Techo)</h3>
+            <p>El Ozono (<strong>O<sub>3</sub></strong>) reacciona con los rayos UV para frenarlos. Si usamos CFCs, rompemos este filtro y nos quemamos, pero esto <em>no calienta la Tierra</em> directamente.</p>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/ea/NASA_Ozone_Hole_Sept_2000.jpg" alt="Mapa del Agujero de Ozono" class="concept-img" style="max-width: 300px;">
+        </div>
+
+        <div class="theory-card">
+            <span class="theme-badge" style="background:#27ae60;">Tema 3: Ciclo del Carbono</span>
+            <h3>El Balance de Materia</h3>
+            <p>El carbono circula entre emisiones y sumideros (bosques). Cuando emitimos más de lo que la Tierra puede absorber, rompemos este ciclo.</p>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Carbon_cycle-simple_diagram.svg/600px-Carbon_cycle-simple_diagram.svg.png" alt="Ciclo del Carbono" class="concept-img" style="max-width: 500px;">
+        </div>
+
+        <div class="theory-card">
+            <span class="theme-badge" style="background:#c0392b;">Temas 4 y 5: GEI y Cambio Climático</span>
+            <h3>La "Manta Térmica"</h3>
+            <p>Al romperse el ciclo del carbono, el Dióxido de Carbono (<strong>CO<sub>2</sub></strong>) se acumula. Actúa como una manta: deja entrar la luz pero atrapa el calor (Infrarrojo).</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="tab-btn" style="background: var(--success); color: white;" onclick="switchTab('simulador')">👉 IR AL SIMULADOR AHORA</button>
+        </div>
+    </section>
+
+    <section id="simulador" class="content-section">
+        <div class="main-container-sim">
+            
+            <button class="help-btn" onclick="openModal()" title="Ver Instrucciones">?</button>
+
+            <aside class="control-panel">
+                <h3 style="margin-top:0; border-bottom:2px solid #eee; padding-bottom:10px;">Variables de Proceso</h3>
+                
+                <div style="margin-bottom: 25px;">
+                    <label>1. Fuente de Energía (Sol) <span id="valSun" style="float:right; background:#2c3e50; color:white; padding:2px 6px; border-radius:4px;">1.0</span></label>
+                    <input type="range" id="inSun" min="0.8" max="1.3" step="0.05" value="1.0" style="width:100%;">
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <label>2. Filtro (O<sub>3</sub> / CFCs) <span id="valOzone" style="float:right; background:#2c3e50; color:white; padding:2px 6px; border-radius:4px;">100%</span></label>
+                    <input type="range" id="inOzone" min="0" max="100" step="1" value="95" style="width:100%;">
+                    <small style="color:#666; font-size:0.8em;">CFCs destruyen este valor</small>
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <label>3. Ciclo Carbono (CO<sub>2</sub>) <span id="valCO2" style="float:right; background:#2c3e50; color:white; padding:2px 6px; border-radius:4px;">280 ppm</span></label>
+                    <input type="range" id="inCO2" min="280" max="1000" step="10" value="280" style="width:100%;">
+                    <small style="color:#666; font-size:0.8em;">Balance Emisiones vs. Sumideros</small>
+                </div>
+
+                <div class="lab-note">
+                    <strong>📝 Nota Experimental:</strong>
+                    <p style="margin:5px 0 0 0;">Recuerda el experimento de los frascos: El CO<sub>2</sub> actúa como el plástico transparente, atrapando el calor.</p>
+                </div>
+            </aside>
+
+            <main>
+                <div class="viewport">
+                    <div class="label-txt" style="top:20px;">Estratósfera (Ozono O<sub>3</sub>)</div>
+                    <div class="label-txt" style="bottom:120px; z-index:10;">Troposfera (Clima/CO<sub>2</sub>)</div>
+                    <div class="sun" id="sun"></div>
+                    <div class="ozone-layer" id="ozoneLayer"></div>
+                    <div class="ghg-cloud" id="ghgCloud"></div>
+                    <div class="ray-uv" id="uvRay"></div>
+                    <div class="ray-ir" id="irGlow"></div>
+                    <div class="ground" id="ground">
+                        <span style="color:white; font-weight:bold; margin-bottom:10px;">Superficie Terrestre</span>
+                    </div>
+                </div>
+
+                <div class="sensors">
+                    <div class="sensor-card" id="cardTemp">
+                        <h3>Temp. Global</h3>
+                        <div class="sensor-value" id="outTemp">14.0 °C</div>
+                        <div id="stTemp" style="font-size:0.8rem; font-weight:bold;">Estable</div>
+                    </div>
+                    <div class="sensor-card" id="cardUV">
+                        <h3>Índice UV</h3>
+                        <div class="sensor-value" id="outUV">3.0</div>
+                        <div id="stUV" style="font-size:0.8rem; font-weight:bold;">Moderado</div>
+                    </div>
+                    <div class="sensor-card">
+                        <h3>Estado</h3>
+                        <div class="sensor-value" id="outSystem" style="font-size:1.1rem; margin-top:5px;">Nominal</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <section class="quiz-section">
+            <h3 style="margin-top:0; color:var(--primary);">🎓 Evaluación de Ingeniería</h3>
+            <div class="quiz-container">
+                <div class="question-card">
+                    <div style="font-weight:bold; margin-bottom:10px;">1. ¿Qué causa el calentamiento global?</div>
+                    <div class="options">
+                        <button onclick="checkAnswer(this, false, 'Incorrecto. El ozono filtra UV, no calor.')">Agujero de Ozono (O<sub>3</sub>)</button>
+                        <button onclick="checkAnswer(this, true, '¡Correcto! El CO<sub>2</sub> atrapa el infrarrojo.')">Exceso de CO<sub>2</sub></button>
+                    </div>
+                    <div class="feedback"></div>
+                </div>
+                <div class="question-card">
+                    <div style="font-weight:bold; margin-bottom:10px;">2. ¿Qué pasa si emitimos CFCs?</div>
+                    <div class="options">
+                        <button onclick="checkAnswer(this, true, '¡Correcto! Se rompe el filtro y entra radiación peligrosa.')">Aumenta Índice UV</button>
+                        <button onclick="checkAnswer(this, false, 'Incorrecto. Los CFCs afectan al ozono, el CO<sub>2</sub> es el que calienta.')">Sube Temperatura drásticamente</button>
+                    </div>
+                    <div class="feedback"></div>
+                </div>
+                <div class="question-card">
+                    <div style="font-weight:bold; margin-bottom:10px;">3. ¿Qué hacen los GEI?</div>
+                    <div class="options">
+                        <button onclick="checkAnswer(this, true, '¡Correcto! Dejan pasar luz, atrapan calor.')">Atrapan Infrarrojo</button>
+                        <button onclick="checkAnswer(this, false, 'Incorrecto. No enfrían, calientan.')">Bloquean el Sol</button>
+                    </div>
+                    <div class="feedback"></div>
+                </div>
+            </div>
+        </section>
+    </section>
+
+    <script>
+        let firstTimeSim = true;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            
+            const buttons = document.querySelectorAll('.tab-btn');
+            if(tabName === 'teoria') buttons[0].classList.add('active');
+            if(tabName === 'simulador') {
+                buttons[1].classList.add('active');
+                if(buttons[2]) buttons[2].classList.add('active'); // Botón interno
+                
+                // Mostrar instrucciones solo la primera vez
+                if(firstTimeSim) {
+                    openModal();
+                    firstTimeSim = false;
+                }
+            }
+        }
+
+        // Lógica del Modal
+        function openModal() {
+            document.getElementById('instructionModal').style.display = 'flex';
+        }
+        function closeModal() {
+            document.getElementById('instructionModal').style.display = 'none';
+        }
+
+        // Lógica del Simulador
+        const inSun = document.getElementById('inSun');
+        const inOzone = document.getElementById('inOzone');
+        const inCO2 = document.getElementById('inCO2');
+        
+        function updateProcess() {
+            let sunFactor = parseFloat(inSun.value);
+            let ozoneHealth = parseInt(inOzone.value);
+            let co2PPM = parseInt(inCO2.value);
+
+            document.getElementById('valSun').innerText = sunFactor.toFixed(2) + "x";
+            document.getElementById('valOzone').innerText = ozoneHealth + "%";
+            document.getElementById('valCO2').innerText = co2PPM + " ppm";
+
+            let baseTemp = 13.5;
+            let solarForcing = (sunFactor - 1.0) * 10;
+            let co2Forcing = 5.35 * Math.log(co2PPM / 280);
+            let globalTemp = baseTemp + solarForcing + (co2Forcing * sunFactor);
+
+            let filterEfficiency = ozoneHealth / 100;
+            let uvIndex = (12 * sunFactor) * (1 - (filterEfficiency * 0.9));
+
+            const sun = document.getElementById('sun');
+            sun.style.transform = `scale(${0.8 + (sunFactor * 0.2)})`;
+            sun.style.boxShadow = `0 0 ${40 * sunFactor}px #f39c12`;
+            
+            document.getElementById('ozoneLayer').style.opacity = ozoneHealth / 100;
+            let uvPenetration = 50 + ((100 - ozoneHealth) * 3.5);
+            document.getElementById('uvRay').style.height = `${uvPenetration}px`;
+
+            document.getElementById('ghgCloud').style.opacity = (co2PPM - 280) / 1000;
+            let heatGlowSize = (globalTemp - 13.5) * 50;
+            let irGlow = document.getElementById('irGlow');
+            irGlow.style.width = `${heatGlowSize}px`;
+            irGlow.style.height = `${heatGlowSize}px`;
+
+            const ground = document.getElementById('ground');
+            if(globalTemp > 16) {
+                ground.style.background = "#e67e22";
+                ground.querySelector('span').innerText = "Superficie: SEQUÍA";
+            } else {
+                ground.style.background = "#27ae60";
+                ground.querySelector('span').innerText = "Superficie Terrestre: ESTABLE";
+            }
+
+            document.getElementById('outTemp').innerText = globalTemp.toFixed(1) + " °C";
+            document.getElementById('outUV').innerText = uvIndex.toFixed(1);
+
+            const stTemp = document.getElementById('stTemp');
+            const cardTemp = document.getElementById('cardTemp');
+            if(globalTemp < 15) { stTemp.innerText = "Estable"; cardTemp.style.borderTopColor = "#27ae60"; }
+            else if (globalTemp < 17) { stTemp.innerText = "Calentamiento"; cardTemp.style.borderTopColor = "#f39c12"; }
+            else { stTemp.innerText = "CRISIS CLIMÁTICA"; cardTemp.style.borderTopColor = "#c0392b"; }
+
+            const stUV = document.getElementById('stUV');
+            const cardUV = document.getElementById('cardUV');
+            if(uvIndex < 3) { stUV.innerText = "Bajo"; cardUV.style.borderTopColor = "#27ae60"; }
+            else if (uvIndex < 7) { stUV.innerText = "Alto"; cardUV.style.borderTopColor = "#f39c12"; }
+            else { stUV.innerText = "EXTREMO"; cardUV.style.borderTopColor = "#c0392b"; }
+
+            const outSystem = document.getElementById('outSystem');
+            if(globalTemp > 17 && uvIndex > 7) { outSystem.innerText = "⚠️ COLAPSO TOTAL"; outSystem.style.color = "#c0392b"; }
+            else if (globalTemp > 17) { outSystem.innerText = "⚠️ Invernadero Crítico"; outSystem.style.color = "#e67e22"; }
+            else if (uvIndex > 7) { outSystem.innerText = "⚠️ Alerta UV"; outSystem.style.color = "#8e44ad"; }
+            else { outSystem.innerText = "✅ Nominal"; outSystem.style.color = "#27ae60"; }
+        }
+
+        function checkAnswer(btn, isCorrect, msg) {
+            let parent = btn.parentElement.parentElement;
+            let feedback = parent.querySelector('.feedback');
+            let allBtns = parent.querySelectorAll('button');
+            allBtns.forEach(b => b.style.opacity = '0.5');
+            btn.style.opacity = '1';
+            feedback.innerHTML = msg;
+            feedback.className = 'feedback ' + (isCorrect ? 'correct' : 'wrong');
+        }
+
+        inSun.addEventListener('input', updateProcess);
+        inOzone.addEventListener('input', updateProcess);
+        inCO2.addEventListener('input', updateProcess);
+        updateProcess();
+    </script>
+</body>
+</html>
